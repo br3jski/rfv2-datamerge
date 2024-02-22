@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "data.h" // Assume this includes the process_data function prototype
+#include <errno.h> 
+
 
 // Utility function to set a socket to non-blocking mode
 int make_socket_non_blocking(int sfd) {
