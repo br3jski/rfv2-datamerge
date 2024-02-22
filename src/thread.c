@@ -1,69 +1,39 @@
-#include "thread.h"
+// Assume "threadpool.h" provides create_thread_pool, shutdown_pool, and add_task_to_pool functions.
+#include "threadpool.h"
+#include "data.h"
 #include <pthread.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "data.h" // Assume this includes the process_data function prototype
-#include <errno.h> 
+#include <errno.h>
 
+ThreadPool pool;  // Global thread pool
 
-// Utility function to set a socket to non-blocking mode
-int make_socket_non_blocking(int sfd) {
-    int flags = fcntl(sfd, F_GETFL, 0);
-    if (flags == -1) {
-        perror("fcntl F_GETFL");
-        return -1;
-    }
-
-    flags |= O_NONBLOCK;
-    if (fcntl(sfd, F_SETFL, flags) == -1) {
-        perror("fcntl F_SETFL");
-        return -1;
-    }
-
-    return 0;
+void init_thread_pool(size_t pool_size) {
+    pool = create_thread_pool(pool_size);
 }
 
-// Thread function for processing data from a connection
-void* connection_handler(void* arg) {
-    int sock = *(int*)arg;
-    free(arg); // Clean up the heap memory allocated for the socket descriptor
+void shutdown_thread_pool() {
+    shutdown_pool(&pool);
+}
 
-    char buffer[1024]; // Adjust size as needed for your application
+void process_connection(int client_sock) {
+    char buffer[1024];
     ssize_t read_size;
 
-    // Loop to read data as long as the socket has data available
-    while ((read_size = recv(sock, buffer, sizeof(buffer), 0)) > 0) {
-        process_data(buffer, read_size); // Process the received data
+    while ((read_size = recv(client_sock, buffer, sizeof(buffer), 0)) > 0) {
+        process_data(buffer, read_size);
     }
 
-    if (read_size == -1 && (errno != EAGAIN || errno != EWOULDBLOCK)) {
+    if (read_size == -1 && (errno != EAGAIN && errno != EWOULDBLOCK)) {
         perror("recv");
     }
 
-    close(sock); // Close the connection
-    return NULL;
+    close(client_sock);
 }
 
-// Function to spawn a new thread for a connection
-void spawn_thread_for_connection(int client_sock) {
-    pthread_t thread;
-    int* new_sock_ptr = malloc(sizeof(int));
-    if (!new_sock_ptr) {
-        perror("Failed to allocate memory for socket descriptor");
-        return;
-    }
-    *new_sock_ptr = client_sock;
-
-    if (make_socket_non_blocking(client_sock) == -1) // Make the socket non-blocking
-        exit(EXIT_FAILURE);
-
-    if (pthread_create(&thread, NULL, connection_handler, new_sock_ptr) != 0) {
-        perror("Failed to create thread");
-        free(new_sock_ptr); // Clean up memory if thread creation fails
-    }
-
-    pthread_detach(thread); // The thread resources are automatically freed upon termination
+void enqueue_task(int client_sock) {
+    add_task_to_pool(&pool, process_connection, (void*)(size_t)client_sock);
 }
