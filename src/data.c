@@ -13,8 +13,8 @@ typedef struct {
 DynamicBuffer mergedDataBuffer;
 
 void dynamic_buffer_init(DynamicBuffer* buffer) {
-    buffer->data = malloc(1);  // Initial allocation
-    buffer->capacity = 1;  // Start small to demonstrate dynamic resizing
+    buffer->data = malloc(1); // Initial allocation with minimal size
+    buffer->capacity = 1; // Start small to demonstrate dynamic resizing
     buffer->size = 0;
     pthread_mutex_init(&buffer->lock, NULL);
 }
@@ -23,8 +23,9 @@ void dynamic_buffer_append(DynamicBuffer* buffer, const char* data, size_t data_
     pthread_mutex_lock(&buffer->lock);
     if (buffer->size + data_size > buffer->capacity) {
         size_t new_capacity = buffer->capacity;
-        while (new_capacity < buffer->size + data_size)
-            new_capacity *= 2;
+        while (new_capacity < buffer->size + data_size) {
+            new_capacity *= 2; // Double the capacity until it can fit the new data
+        }
         char* new_data = realloc(buffer->data, new_capacity);
         if (!new_data) {
             perror("Failed to realloc");

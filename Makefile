@@ -1,21 +1,27 @@
-# Makefile
-
-# Variables
+# Define the compiler
 CC = gcc
-CFLAGS = -Wall -Werror
-TARGET = myprogram
 
-# Targets
+# Compiler flags
+# -g    adds debugging information to the executable file
+# -Wall turns on most, but not all, compiler warnings
+CFLAGS  = -g -Wall
+
+# The build target executable:
+TARGET = server_app
+
+# Define source files
+SOURCES = main.c threadpool.c data.c
+# Define object files
+OBJECTS = $(SOURCES:.c=.o)
+
 all: $(TARGET)
 
-$(TARGET): main.o utils.o
-	$(CC) $(CFLAGS) -o $@ $^
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJECTS) -pthread
 
-main.o: main.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-utils.o: utils.c
+# To obtain object files
+%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(TARGET) *.o
+	$(RM) $(TARGET) $(OBJECTS)
