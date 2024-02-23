@@ -29,8 +29,31 @@ int make_socket_non_blocking(int sfd) {
 
 void handle_connection(void* arg) {
     int client_sock = (int)(size_t)arg;
-    // Placeholder: Read data from client_sock, process it and write response.
-    close(client_sock); // Close the socket when done.
+    char buffer[1024]; // Buffer for storing received data
+    ssize_t bytes_read;
+
+    // Attempt to read data from the client
+    bytes_read = recv(client_sock, buffer, sizeof(buffer) - 1, 0);
+    if (bytes_read < 0) {
+        perror("recv");
+        close(client_sock);
+        return;
+    }
+
+    // Null-terminate the received data and process it
+    buffer[bytes_read] = '\0';
+    printf("Received: %s\n", buffer);
+
+    // Example processing: simply echo back the received data for demonstration
+    // In a real application, you might process the data and generate a different response
+    if (send(client_sock, buffer, bytes_read, 0) < 0) {
+        perror("send");
+        close(client_sock);
+        return;
+    }
+
+    // Close the socket when done
+    close(client_sock);
 }
 
 int main() {
